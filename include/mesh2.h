@@ -111,6 +111,11 @@ namespace gl {
 			IsError(__FILE__, __LINE__);
 		}
 
+		unsigned int GetVAO()
+		{
+			return VAO_;
+		}
+
 		unsigned int material_index_ = 0;
 		unsigned int nb_vertices_ = 0;
 		std::vector<Vertex> vertices_;

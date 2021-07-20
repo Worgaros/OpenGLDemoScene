@@ -14,7 +14,7 @@ namespace gl {
 		Texture(const std::string& file_name)
 		{
 			int width, height, nrChannels;
-			//stbi_set_flip_vertically_on_load(true);
+			stbi_set_flip_vertically_on_load(true);
 			unsigned char* dataDiffuse = stbi_load(
 				file_name.c_str(),
 				&width,

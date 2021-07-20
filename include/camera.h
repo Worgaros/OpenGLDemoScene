@@ -141,6 +141,14 @@ namespace gl {
 				Zoom = 45.0f;
 		}
 
+		void SetState(glm::vec3 position, float pitch, float yaw)
+		{
+			this->position = position;
+			this->pitch = pitch;
+			this->yaw = yaw;
+			updateCameraVectors();
+		}
+
 	private:
 		// calculates the front vector from the Camera's (updated) Euler Angles
 		void updateCameraVectors()

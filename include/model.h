@@ -75,6 +75,10 @@ namespace gl
 			mat.specular_strength = glm::vec3(material.specular[0], material.specular[1], material.specular[2]);
 			materials.push_back(mat);
 		}
+
+		Mesh2 GetMesh(unsigned int i){
+			return meshes[i];
+		}
 		
 		std::vector<Mesh2> meshes;
 		std::vector<Material> materials;

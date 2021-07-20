@@ -1,9 +1,10 @@
 {
-    "name": "opengldemoscene",
+   "name": "opengldemoscene",
     "version-string": "1.0",
     "dependencies":
     [
         "tinyobjloader",
+		"assimp",
         "glm",
         "sdl2",
       {

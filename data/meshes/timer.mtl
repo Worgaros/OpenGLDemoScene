@@ -1,0 +1,14 @@
+# Blender MTL File: 'None'
+# Material Count: 2
+
+newmtl 13_-_Default
+map_Kd Timer/timer.png
+map_Ks Timer/timerR.png
+d 1.000000
+illum 1
+
+newmtl Material_#153
+map_Kd Timer/timer.png
+map_Ks Timer/timerR.png
+d 0.500000
+illum 1
