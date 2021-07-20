@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include "error.h"
 
 namespace gl {
 
@@ -231,16 +232,6 @@ namespace gl {
 					throw std::runtime_error(
 						"Shader linking error: " + type + " : " + infoLog);
 				}
-			}
-		}
-		void IsError(const char* file, int line) const {
-			auto error_code = glGetError();
-			if (error_code != GL_NO_ERROR)
-			{
-				throw std::runtime_error(
-					std::to_string(error_code) +
-					" in file: " + file +
-					" at line: " + std::to_string(line));
 			}
 		}
 	};

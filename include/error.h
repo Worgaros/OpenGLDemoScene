@@ -4,7 +4,7 @@
 #include <string>
 #include <iostream>
 
-void IsError(const std::string& file, int line)
+inline void IsError(const std::string& file, int line)
 {
 	auto error_code = glGetError();
 	if (error_code != GL_NO_ERROR)

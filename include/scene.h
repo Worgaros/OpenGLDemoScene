@@ -2,12 +2,12 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <memory>
 
 #include "engine.h"
 #include "camera.h"
 #include "shader.h"
-#include "modeli.h"
-#include "scene.h"
+#include "model.h"
 
 namespace gl
 {
@@ -19,13 +19,10 @@ namespace gl
 		void OnEvent(SDL_Event& event) override;
 		void DrawImGui() override;
 		void Destroy() override;
-
-	protected:
 		void SetModelMatrix();
 		void SetRotationMatrix();
 		void SetViewMatrix(seconds dt);
 		void SetProjectionMatrix();
-		void IsError(const std::string& file, int line) const;
 		void SetUniformMatrixNormal() const;
 		void SetUniformMatrixInstancing() const;
 		void SetUniformMatrixBlending() const;
@@ -107,7 +104,7 @@ namespace gl
 		 1.0f, -1.0f,  1.0f
 		};
 
-		std::unique_ptr<gl::Model> normal_obj = nullptr;
+		std::unique_ptr<Model> normal_obj = nullptr;
 		std::unique_ptr<Model> outline_obj = nullptr;
 		std::unique_ptr<Model> blending_obj = nullptr;
 		std::unique_ptr<Camera> camera_ = nullptr;
@@ -137,5 +134,7 @@ namespace gl
 		std::vector<float> initDistanceX_;
 		std::vector<float> initDistanceY_;
 		std::vector<float> initDistanceZ_;
+
+		std::string path = "../";
 	};
 }

@@ -4,12 +4,24 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
-#include "meshi.h"
-#include "texturi.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 #include "scene.h"
+#include "mesh.h"
+#include "model.h"
+#include "texture.h"
+#include <string>
+#include <vector>
+#include <array>
+#include <memory>
+
+#include "engine.h"
+#include "camera.h"
+#include "shader.h"
+#include "model.h"
+#include "error.h"
 
 namespace gl {
-
 	glm::vec3 HelloScene::GetPositionInstancing(unsigned i) {
 		glm::vec3 scale;
 		glm::quat rotation;
@@ -64,30 +76,28 @@ namespace gl {
 		return textureID;
 	}
 
-	void HelloScene::IsError(const std::string& file, int line) const
-	{
-		auto error_code = glGetError();
-		if (error_code != GL_NO_ERROR)
-		{
-			std::cerr
-				<< error_code
-				<< " in file: " << file
-				<< " at line: " << line
-				<< "\n";
-		}
-	}
-
 	void HelloScene::Init()
 	{
+		// Init depth.
 		glEnable(GL_DEPTH_TEST);
 		IsError(__FILE__, __LINE__);
 		glDepthFunc(GL_LESS);
+		IsError(__FILE__, __LINE__);
+		// Init blending.
 		glEnable(GL_BLEND);
 		IsError(__FILE__, __LINE__);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		IsError(__FILE__, __LINE__);
-		std::string path = "../";
+		// Init stencil.
+		glEnable(GL_STENCIL_TEST);
+		IsError(__FILE__, __LINE__);
+		glStencilFunc(GL_NOTEQUAL, 1, 0xff);
+		IsError(__FILE__, __LINE__);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		IsError(__FILE__, __LINE__);
+		
 
+		// skybox init
 		glGenVertexArrays(1, &skybox_VAO_);
 		IsError(__FILE__, __LINE__);
 		glBindVertexArray(skybox_VAO_);
@@ -150,8 +160,6 @@ namespace gl {
 		auto instancing_mesh_ = instancing_obj->GetMesh(0);
 		glBindVertexArray(instancing_mesh_.GetVAO());
 		IsError(__FILE__, __LINE__);
-
-		//VBO
 		glGenBuffers(1, &VBO_instances_);
 		IsError(__FILE__, __LINE__);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO_instances_);
@@ -185,14 +193,6 @@ namespace gl {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		IsError(__FILE__, __LINE__);
 		glBindVertexArray(0);
-		IsError(__FILE__, __LINE__);
-
-		// init stencil
-		glEnable(GL_STENCIL_TEST);
-		IsError(__FILE__, __LINE__);
-		glStencilFunc(GL_NOTEQUAL, 1, 0xff);
-		IsError(__FILE__, __LINE__);
-		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 		IsError(__FILE__, __LINE__);
 	}
 
@@ -365,10 +365,7 @@ namespace gl {
 		glEnable(GL_DEPTH_TEST);
 		IsError(__FILE__, __LINE__);
 		// BLENDING
-		glEnable(GL_BLEND);
-		IsError(__FILE__, __LINE__);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		IsError(__FILE__, __LINE__);
+		
 		SetUniformMatrixBlending();
 		for (MeshAssimp& mesh : blending_obj->meshes)
 		{

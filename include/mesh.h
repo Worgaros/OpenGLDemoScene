@@ -1,149 +1,168 @@
 #pragma once
 
-#include <iostream>
 #include <string>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
+#include <vector>
+#include "shader.h"
+#include "error.h"
+#include "texture.h"
 
 namespace gl {
-	class Vertex
+	class VertexAssimp
 	{
 	public:
 		glm::vec3 position;
 		glm::vec3 normal;
 		glm::vec2 texture;
+		glm::vec3 tangents;
+		glm::vec3 bitangents;
 	};
-	
-	class Mesh {
-	public:
-		unsigned int VAO;
-		unsigned int VBO;
-		unsigned int EBO;
-		unsigned int nb_vertices;
 
-		void IsError(const std::string& file, int line) const
+	class MeshAssimp {
+	public:
+		// mesh data
+		std::vector<VertexAssimp> vertices;
+		std::vector<unsigned int> indices;
+		std::vector<textureAssimp> textures;
+		VertexAssimp vertex;
+		unsigned int VAO, VBO, EBO;
+		unsigned int material_index_ = 0;
+		std::vector<VertexAssimp> vertices_;
+		std::vector<uint32_t> indices_;
+
+		MeshAssimp(std::vector<VertexAssimp> vertices, std::vector<unsigned int> indices, std::vector<textureAssimp> textures)
 		{
-			auto error_code = glGetError();
-			if (error_code != GL_NO_ERROR)
-			{
-				std::cerr
-					<< error_code
-					<< " in file: " << file
-					<< " at line: " << line
-					<< "\n";
-			}
+			this->vertices = vertices;
+			this->indices = indices;
+			this->textures = textures;
+
+			setupMesh();
 		}
 
-		Mesh(const std::string& filename)
+		void setupMesh()
 		{
-			tinyobj::ObjReader reader;
-			if (!reader.ParseFromFile(filename))
-			{
-				throw std::runtime_error("cannot load file: " + filename);
-			}
-			auto& attrib = reader.GetAttrib();
-			auto& shapes = reader.GetShapes();
-			auto& materials = reader.GetMaterials();
-			assert(shapes.size() == 1);
-			std::vector<Vertex> vertices;
-			std::vector<std::uint32_t> indices;
-			int index_offset = 0;
-			for (std::size_t f = 0; f < shapes[0].mesh.num_face_vertices.size(); ++f)
-			{
-				int fv = shapes[0].mesh.num_face_vertices[f];
-				if (fv != 3) throw std::runtime_error("Should be triangles ?");
-
-				// Loop over vertices in the face.
-				for (size_t v = 0; v < fv; v++) {
-					Vertex vertex{};
-					// access to vertex
-					tinyobj::index_t idx =
-						shapes[0].mesh.indices[index_offset + v];
-					vertex.position.x = attrib.vertices[3 * idx.vertex_index + 0];
-					vertex.position.y = attrib.vertices[3 * idx.vertex_index + 1];
-					vertex.position.z = attrib.vertices[3 * idx.vertex_index + 2];
-					vertex.normal.x = attrib.normals[3 * idx.normal_index + 0];
-					vertex.normal.y = attrib.normals[3 * idx.normal_index + 1];
-					vertex.normal.z = attrib.normals[3 * idx.normal_index + 2];
-					vertex.texture.x =
-						attrib.texcoords[2 * idx.texcoord_index + 0];
-					vertex.texture.y =
-						attrib.texcoords[2 * idx.texcoord_index + 1];
-					vertices.push_back(vertex);
-					indices.push_back(static_cast<int>(indices.size()));
-				}
-				index_offset += fv;
-			}
-			nb_vertices = index_offset;
-			// VAO binding should be before VAO.
 			glGenVertexArrays(1, &VAO);
 			IsError(__FILE__, __LINE__);
-			glBindVertexArray(VAO);
+			glGenBuffers(1, &VBO);
 			IsError(__FILE__, __LINE__);
-
-			// EBO.
 			glGenBuffers(1, &EBO);
 			IsError(__FILE__, __LINE__);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-			IsError(__FILE__, __LINE__);
-			glBufferData(
-				GL_ELEMENT_ARRAY_BUFFER,
-				indices.size() * sizeof(float),
-				indices.data(),
-				GL_STATIC_DRAW);
-			IsError(__FILE__, __LINE__);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-			IsError(__FILE__, __LINE__);
 
-			// VBO.
-			glGenBuffers(1, &VBO);
+			glBindVertexArray(VAO);
 			IsError(__FILE__, __LINE__);
 			glBindBuffer(GL_ARRAY_BUFFER, VBO);
 			IsError(__FILE__, __LINE__);
-			glBufferData(
-				GL_ARRAY_BUFFER,
-				vertices.size() * sizeof(Vertex),
-				vertices.data(),
-				GL_STATIC_DRAW);
+
+			glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(VertexAssimp), &vertices[0], GL_STATIC_DRAW);
 			IsError(__FILE__, __LINE__);
 
-			GLintptr vertex_color_offset = 3 * sizeof(float);
-			GLintptr vertex_tex_offset = 6 * sizeof(float);
-			glVertexAttribPointer(
-				0,
-				3,
-				GL_FLOAT,
-				GL_FALSE,
-				8 * sizeof(float),
-				0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 			IsError(__FILE__, __LINE__);
-			glVertexAttribPointer(
-				1,
-				3,
-				GL_FLOAT,
-				GL_FALSE,
-				8 * sizeof(float),
-				(GLvoid*)vertex_color_offset);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
+				&indices[0], GL_STATIC_DRAW);
 			IsError(__FILE__, __LINE__);
-			glVertexAttribPointer(
-				2,
-				2,
-				GL_FLOAT,
-				GL_FALSE,
-				8 * sizeof(float),
-				(GLvoid*)vertex_tex_offset);
-			IsError(__FILE__, __LINE__);
-			glEnableVertexAttribArray(0);
-			IsError(__FILE__, __LINE__);
+
+			// vertex positions
 			glEnableVertexAttribArray(1);
 			IsError(__FILE__, __LINE__);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAssimp), (void*)0);
+			IsError(__FILE__, __LINE__);
+			// vertex normals
 			glEnableVertexAttribArray(2);
 			IsError(__FILE__, __LINE__);
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAssimp), (void*)offsetof(VertexAssimp, normal));
+			IsError(__FILE__, __LINE__);
+			// vertex texture coords
+			glEnableVertexAttribArray(3);
+			IsError(__FILE__, __LINE__);
+			glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(VertexAssimp), (void*)offsetof(VertexAssimp, texture));
+			IsError(__FILE__, __LINE__);
+			// vertex tangents
+			glEnableVertexAttribArray(4);
+			IsError(__FILE__, __LINE__);
+			glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAssimp), (void*)offsetof(VertexAssimp, tangents));
+			IsError(__FILE__, __LINE__);
+			// vertex bitangents
+			glEnableVertexAttribArray(5);
+			IsError(__FILE__, __LINE__);
+			glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAssimp), (void*)offsetof(VertexAssimp, bitangents));
+			IsError(__FILE__, __LINE__);
 
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
 			IsError(__FILE__, __LINE__);
 		}
+
+		void BindTexture(Shader& shader)
+		{
+			// bind appropriate textures
+			unsigned int diffuseNr = 1;
+			unsigned int specularNr = 1;
+			unsigned int normalNr = 1;
+			for (unsigned int i = 0; i < textures.size(); i++)
+			{
+				glActiveTexture(GL_TEXTURE0 + i); // active proper texture unit before binding
+				IsError(__FILE__, __LINE__);
+				// retrieve texture number (the N in diffuse_textureN)
+				std::string number;
+				std::string name = textures[i].type;
+				if (name == "Diffuse")
+					number = std::to_string(diffuseNr++);
+				else if (name == "Specular")
+					number = std::to_string(specularNr++); // transfer unsigned int to stream
+				else if (name == "Normal")
+					number = std::to_string(normalNr++); // transfer unsigned int to stream
+
+				// now set the sampler to the correct texture unit
+				glUniform1i(glGetUniformLocation(shader.id, (name + number).c_str()), i);
+				IsError(__FILE__, __LINE__);
+				// and finally bind the texture
+				glBindTexture(GL_TEXTURE_2D, textures[i].id);
+				IsError(__FILE__, __LINE__);
+			}
+		}
+		
+		void Draw(Shader& shader)
+		{
+			BindTexture(shader);
+			// draw mesh
+			glBindVertexArray(VAO);
+			IsError(__FILE__, __LINE__);
+			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+			IsError(__FILE__, __LINE__);
+			glBindVertexArray(0);
+			IsError(__FILE__, __LINE__);
+
+			// always good practice to set everything back to defaults once configured.
+			glActiveTexture(GL_TEXTURE0);
+			IsError(__FILE__, __LINE__);
+		}
+
+		void DrawInstancing(Shader& shader, MeshAssimp meshInstancing, unsigned int VBO_instances_, std::vector<glm::mat4> modelMatrix_)
+		{
+			glBindVertexArray(meshInstancing.GetVAO());
+			IsError(__FILE__, __LINE__);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO_instances_);
+			IsError(__FILE__, __LINE__);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * modelMatrix_.size(), &modelMatrix_[0], GL_STATIC_DRAW);
+			IsError(__FILE__, __LINE__);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			IsError(__FILE__, __LINE__);
+			glDrawElementsInstanced(GL_TRIANGLES, vertices.size(), GL_UNSIGNED_INT, 0, modelMatrix_.size());
+			IsError(__FILE__, __LINE__);
+			glBindVertexArray(0);
+			IsError(__FILE__, __LINE__);
+		}
+		
+		void Bind()
+		{
+			glBindVertexArray(VAO);
+			IsError(__FILE__, __LINE__);
+		}
+		
+		unsigned int GetVAO()
+		{
+			return VAO;
+		}
 	};
-} // End namespace gl.
+}// End namespace gl.
