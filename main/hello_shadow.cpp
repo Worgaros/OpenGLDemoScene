@@ -212,14 +212,13 @@ namespace gl {
 				<< " at line: " << line
 				<< "\n";
 		}
-
-		
 	}
 
 	void HelloScene::Init()
 	{
 		glEnable(GL_DEPTH_TEST);
 		IsError(__FILE__, __LINE__);
+		glDepthFunc(GL_LESS);
 		glEnable(GL_BLEND);
 		IsError(__FILE__, __LINE__);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -246,7 +245,7 @@ namespace gl {
 		blending_obj = std::make_unique<Model>(path + "data/meshes/timer.obj");
 		outline_obj = std::make_unique<Model>(path + "data/meshes/F1.obj");
 		
-		camera_ = std::make_unique<Camera>(glm::vec3(0.0, 0.0, 800.0));
+		camera_ = std::make_unique<Camera>(glm::vec3(.0, 0.0, 800.0));
 
 		normal_shaders_ = std::make_unique<Shader>(
 			path + "data/shaders/normal/normal.vert",
@@ -267,6 +266,10 @@ namespace gl {
 		default_shaders_ = std::make_unique<Shader>(
 			path + "data/shaders/default/default.vert",
 			path + "data/shaders/default/default.frag");
+
+		outline_shaders_ = std::make_unique<Shader>(
+			path + "data/shaders/outline/outline.vert",
+			path + "data/shaders/outline/outline.frag");
 
 		cubemap_texture_ = loadCubemap(faces_);
 
@@ -320,13 +323,22 @@ namespace gl {
 		IsError(__FILE__, __LINE__);
 		glBindVertexArray(0);
 		IsError(__FILE__, __LINE__);
+
+		// init stencil
+		glEnable(GL_STENCIL_TEST);
+		IsError(__FILE__, __LINE__);
+		glStencilFunc(GL_NOTEQUAL, 1, 0xff);
+		IsError(__FILE__, __LINE__);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		IsError(__FILE__, __LINE__);
 	}
 
 	void HelloScene::SetModelMatrix()
 	{
 		normal_model = glm::translate(normal_model, glm::vec3(0.0f, 0.0f, -5.0f));
-		outline_model = glm::translate(outline_model, glm::vec3(5.0f, 0.0f, -5.0f));
-		blending_model = glm::translate(blending_model, glm::vec3(-5.0f, 0.0f, -5.0f));
+		outline_model = glm::translate(outline_model, glm::vec3(5.0f, 0.0f, -2.0f));
+		outline_model = glm::scale(outline_model, glm::vec3(0.05f));
+		blending_model = glm::translate(blending_model, glm::vec3(-5.0f, -0.5f, -5.0f));
 		blending_model = glm::scale(blending_model, glm::vec3(5.0f));
 	}
 
@@ -351,7 +363,7 @@ namespace gl {
 	{
 		default_shaders_->Use();
 		default_shaders_->SetMat4("view", view_);
-		default_shaders_->SetMat4("model", normal_model);
+		default_shaders_->SetMat4("model", outline_model);
 		default_shaders_->SetMat4("projection", projection_);
 		default_shaders_->SetVec3("viewPos", camera_->position);
 	}
@@ -406,45 +418,7 @@ namespace gl {
 		{
 			mesh.Draw(*normal_shaders_);
 		}
-		// OUTLINE
-		/*glStencilFunc(GL_ALWAYS, 1, 0xff);
-		IsError(__FILE__, __LINE__);
-		glStencilMask(0xff);
-		IsError(__FILE__, __LINE__);
-		glEnable(GL_DEPTH_TEST);
-		IsError(__FILE__, __LINE__);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, outline_obj->GetMesh(0).EBO);
-		IsError(__FILE__, __LINE__);
-		glBindVertexArray(outline_obj->GetMesh(0).EBO);
-		IsError(__FILE__, __LINE__);
-		SetUniformMatrixBasic();
-		glDrawElements(GL_TRIANGLES, outline_obj->GetMesh(0).indices.size(), GL_UNSIGNED_INT, 0);
-		IsError(__FILE__, __LINE__);
-		glStencilFunc(GL_NOTEQUAL, 1, 0xff);
-		IsError(__FILE__, __LINE__);
-		glStencilMask(0x00);
-		IsError(__FILE__, __LINE__);
-		glDisable(GL_DEPTH_TEST);
-		IsError(__FILE__, __LINE__);
-		float scale = 1.03f;
-		outline_shaders_->Use();
-		glm::mat4 model = outline_model;
-		model = glm::scale(model, glm::vec3(scale, scale, scale));
-		outline_shaders_->SetMat4("model", model);
-		outline_shaders_->SetMat4("view", view_);
-		outline_shaders_->SetMat4("projection", projection_);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, outline_obj->GetMesh(0).EBO);
-		IsError(__FILE__, __LINE__);
-		glBindVertexArray(outline_obj->GetMesh(0).VAO);
-		IsError(__FILE__, __LINE__);
-		glDrawElements(GL_TRIANGLES, outline_obj->GetMesh(0).indices.size(), GL_UNSIGNED_INT, 0);
-		IsError(__FILE__, __LINE__);
-		glStencilMask(0xff);
-		IsError(__FILE__, __LINE__);
-		glStencilFunc(GL_ALWAYS, 0, 0xff);
-		IsError(__FILE__, __LINE__);
-		glEnable(GL_DEPTH_TEST);
-		IsError(__FILE__, __LINE__);*/
+		
 		// INSTANCING
 		SetUniformMatrixInstancing();
 		MeshAssimp meshInstancing = instancing_obj->GetMesh(0);
@@ -489,6 +463,44 @@ namespace gl {
 		glDepthFunc(GL_LESS); // set depth function back to default
 		IsError(__FILE__, __LINE__);
 		SetViewMatrix(dt);
+		// OUTLINE
+		glStencilFunc(GL_ALWAYS, 1, 0xff);
+		IsError(__FILE__, __LINE__);
+		glStencilMask(0xff);
+		IsError(__FILE__, __LINE__);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, outline_obj->GetMesh(0).EBO);
+		IsError(__FILE__, __LINE__);
+		glBindVertexArray(outline_obj->GetMesh(0).VAO);
+		IsError(__FILE__, __LINE__);
+		SetUniformMatrixBasic();
+		outline_obj->GetMesh(0).BindTexture(*default_shaders_);
+		glDrawElements(GL_TRIANGLES, outline_obj->GetMesh(0).indices.size(), GL_UNSIGNED_INT, 0);
+		IsError(__FILE__, __LINE__);
+		glStencilFunc(GL_NOTEQUAL, 1, 0xff);
+		IsError(__FILE__, __LINE__);
+		glStencilMask(0x00);
+		IsError(__FILE__, __LINE__);
+		glDisable(GL_DEPTH_TEST);
+		IsError(__FILE__, __LINE__);
+		float scale = 1.1f;
+		outline_shaders_->Use();
+		glm::mat4 model = outline_model;
+		model = glm::scale(model, glm::vec3(scale, scale, scale));
+		outline_shaders_->SetMat4("model", model);
+		outline_shaders_->SetMat4("view", view_);
+		outline_shaders_->SetMat4("projection", projection_);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, outline_obj->GetMesh(0).EBO);
+		IsError(__FILE__, __LINE__);
+		glBindVertexArray(outline_obj->GetMesh(0).VAO);
+		IsError(__FILE__, __LINE__);
+		glDrawElements(GL_TRIANGLES, outline_obj->GetMesh(0).indices.size(), GL_UNSIGNED_INT, 0);
+		IsError(__FILE__, __LINE__);
+		glStencilMask(0xff);
+		IsError(__FILE__, __LINE__);
+		glStencilFunc(GL_ALWAYS, 0, 0xff);
+		IsError(__FILE__, __LINE__);
+		glEnable(GL_DEPTH_TEST);
+		IsError(__FILE__, __LINE__);
 		// BLENDING
 		glEnable(GL_BLEND);
 		IsError(__FILE__, __LINE__);
