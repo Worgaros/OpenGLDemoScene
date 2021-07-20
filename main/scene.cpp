@@ -20,6 +20,7 @@
 #include "shader.h"
 #include "model.h"
 #include "error.h"
+#include "cubemap.h"
 
 namespace gl {
 	glm::vec3 HelloScene::GetPositionInstancing(unsigned i) {
@@ -28,53 +29,17 @@ namespace gl {
 		glm::vec3 translation;
 		glm::vec3 skew;
 		glm::vec4 perspective;
-		glm::decompose(modelMatrix_[i], scale, rotation, translation, skew, perspective);
+		glm::decompose(model_matrix_[i], scale, rotation, translation, skew, perspective);
 
 		return translation;
 	}
 
 	void HelloScene::SetModelMatrixInstancing(seconds dt, unsigned i) {
-		modelMatrix_[i] = glm::mat4(1.0f);
-		modelMatrix_[i] = glm::translate(modelMatrix_[i], transVec_ + glm::vec3(initDistanceX_[i], initDistanceY_[i], initDistanceZ_[i]));
+		model_matrix_[i] = glm::mat4(1.0f);
+		model_matrix_[i] = glm::translate(model_matrix_[i], trans_vec_ + glm::vec3(init_distanceX_[i], init_distanceY_[i], init_distanceZ_[i]));
 	}
 
-	unsigned int loadCubemap(std::vector<std::string> faces)
-	{
-		unsigned int textureID;
-		glGenTextures(1, &textureID);
-		IsError(__FILE__, __LINE__);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-		IsError(__FILE__, __LINE__);
-
-		int width, height, nrChannels;
-		for (unsigned int i = 0; i < faces.size(); i++)
-		{
-			unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
-			if (data)
-			{
-				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-				IsError(__FILE__, __LINE__);
-				stbi_image_free(data);
-			}
-			else
-			{
-				std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
-				stbi_image_free(data);
-			}
-		}
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		IsError(__FILE__, __LINE__);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		IsError(__FILE__, __LINE__);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		IsError(__FILE__, __LINE__);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		IsError(__FILE__, __LINE__);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		IsError(__FILE__, __LINE__);
-
-		return textureID;
-	}
+	
 
 	void HelloScene::Init()
 	{
@@ -96,23 +61,6 @@ namespace gl {
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 		IsError(__FILE__, __LINE__);
 		
-
-		// skybox init
-		glGenVertexArrays(1, &skybox_VAO_);
-		IsError(__FILE__, __LINE__);
-		glBindVertexArray(skybox_VAO_);
-		IsError(__FILE__, __LINE__);
-		glGenBuffers(1, &skybox_VBO_);
-		IsError(__FILE__, __LINE__);
-		glBindBuffer(GL_ARRAY_BUFFER, skybox_VBO_);
-		IsError(__FILE__, __LINE__);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(skybox_vertices_), &skybox_vertices_, GL_STATIC_DRAW);
-		IsError(__FILE__, __LINE__);
-		glEnableVertexAttribArray(10);
-		IsError(__FILE__, __LINE__);
-		glVertexAttribPointer(10, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-		IsError(__FILE__, __LINE__);
-		
 		normal_obj = std::make_unique<Model>(path + "data/meshes/cubenormal.obj");
 		instancing_obj = std::make_unique<Model>(path + "data/meshes/rock.obj");
 		blending_obj = std::make_unique<Model>(path + "data/meshes/timer.obj");
@@ -123,10 +71,6 @@ namespace gl {
 		normal_shaders_ = std::make_unique<Shader>(
 			path + "data/shaders/normal/normal.vert",
 			path + "data/shaders/normal/normal.frag");
-
-		cubemaps_shaders_ = std::make_unique<Shader>(
-			path + "data/shaders/cubemaps/cubemaps.vert",
-			path + "data/shaders/cubemaps/cubemaps.frag");
 
 		blending_shaders_ = std::make_unique<Shader>(
 			path + "data/shaders/blending/blending.vert",
@@ -144,18 +88,18 @@ namespace gl {
 			path + "data/shaders/outline/outline.vert",
 			path + "data/shaders/outline/outline.frag");
 
-		cubemap_texture_ = loadCubemap(faces_);
-
 		SetModelMatrix();
 
+		cubemap_.Init(path);
+
 		// instancing init
-		initDistanceX_.resize(nbr_instances_);
-		std::generate(initDistanceX_.begin(), initDistanceX_.end(), [&]() {return (std::rand() % density_instances_) / (density_instances_ / thickness_instances_x_) - (thickness_instances_x_ / 2.0f); });
-		initDistanceY_.resize(nbr_instances_);
-		std::generate(initDistanceY_.begin(), initDistanceY_.end(), [&]() {return (std::rand() % density_instances_) / (density_instances_ / thickness_instances_y_) - (thickness_instances_y_ / 2.0f); });
-		initDistanceZ_.resize(nbr_instances_);
-		std::generate(initDistanceZ_.begin(), initDistanceZ_.end(), [&]() {return (std::rand() % density_instances_) / (density_instances_ / thickness_instances_z_) - (thickness_instances_z_ / 2.0f); });
-		modelMatrix_.resize(nbr_instances_, glm::mat4(1.0f));
+		init_distanceX_.resize(nbr_instances_);
+		std::generate(init_distanceX_.begin(), init_distanceX_.end(), [&]() {return (std::rand() % density_instances_) / (density_instances_ / thickness_instances_x_) - (thickness_instances_x_ / 2.0f); });
+		init_distanceY_.resize(nbr_instances_);
+		std::generate(init_distanceY_.begin(), init_distanceY_.end(), [&]() {return (std::rand() % density_instances_) / (density_instances_ / thickness_instances_y_) - (thickness_instances_y_ / 2.0f); });
+		init_distanceZ_.resize(nbr_instances_);
+		std::generate(init_distanceZ_.begin(), init_distanceZ_.end(), [&]() {return (std::rand() % density_instances_) / (density_instances_ / thickness_instances_z_) - (thickness_instances_z_ / 2.0f); });
+		model_matrix_.resize(nbr_instances_, glm::mat4(1.0f));
 		instancing_obj = std::make_unique<Model>(path + "data/meshes/rock.obj");
 		auto instancing_mesh_ = instancing_obj->GetMesh(0);
 		glBindVertexArray(instancing_mesh_.GetVAO());
@@ -287,44 +231,26 @@ namespace gl {
 		MeshAssimp meshInstancing = instancing_obj->GetMesh(0);
 		meshInstancing.Bind();
 		meshInstancing.BindTexture(*instancing_shaders_);
-		for (unsigned int i = 0; i < modelMatrix_.size(); i++)
+		for (unsigned int i = 0; i < model_matrix_.size(); i++)
 		{
 			SetModelMatrixInstancing(dt, i);
 		}
 		glBindBuffer(GL_ARRAY_BUFFER, VBO_instances_);
 		IsError(__FILE__, __LINE__);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * modelMatrix_.size(), &modelMatrix_[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * model_matrix_.size(), &model_matrix_[0], GL_STATIC_DRAW);
 		IsError(__FILE__, __LINE__);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		IsError(__FILE__, __LINE__);
 		glBindVertexArray(meshInstancing.GetVAO());
 		IsError(__FILE__, __LINE__);
-		glDrawElementsInstanced(GL_TRIANGLES, meshInstancing.indices.size(), GL_UNSIGNED_INT, 0, modelMatrix_.size());
+		glDrawElementsInstanced(GL_TRIANGLES, meshInstancing.indices.size(), GL_UNSIGNED_INT, 0, model_matrix_.size());
 		IsError(__FILE__, __LINE__);
 		glBindVertexArray(0);
 		IsError(__FILE__, __LINE__);
 		
-		// SKYBOX
-		glDepthFunc(GL_LEQUAL);
-		IsError(__FILE__, __LINE__);
-		cubemaps_shaders_->Use();
-		cubemaps_shaders_->SetInt("skybox", 0);
 		// Remove translation from the view matrix.
 		view_ = glm::mat4(glm::mat3(camera_->GetViewMatrix()));
-		cubemaps_shaders_->SetMat4("view", view_);
-		cubemaps_shaders_->SetMat4("projection", projection_);
-		glBindVertexArray(skybox_VAO_);
-		IsError(__FILE__, __LINE__);
-		glActiveTexture(GL_TEXTURE0);
-		IsError(__FILE__, __LINE__);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap_texture_);
-		IsError(__FILE__, __LINE__);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		IsError(__FILE__, __LINE__);
-		glBindVertexArray(0);
-		IsError(__FILE__, __LINE__);
-		glDepthFunc(GL_LESS); // set depth function back to default
-		IsError(__FILE__, __LINE__);
+		cubemap_.Draw(view_, projection_);
 		SetViewMatrix(dt);
 		// OUTLINE
 		glStencilFunc(GL_ALWAYS, 1, 0xff);

@@ -14,30 +14,30 @@ namespace gl
 			return;
 		}
 
-		processNode(scene->mRootNode, scene);
+		ProcessNode(scene->mRootNode, scene);
 
 	}
 	
-	void Model::processNode(aiNode* node, const aiScene* scene)
+	void Model::ProcessNode(aiNode* node, const aiScene* scene)
 	{
 		// process all the node's meshes (if any)
 		for (unsigned int i = 0; i < node->mNumMeshes; i++)
 		{
 			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-			meshes.push_back(processMesh(mesh, scene));
+			meshes.push_back(ProcessMesh(mesh, scene));
 		}
 		// then do the same for each of its children
 		for (unsigned int i = 0; i < node->mNumChildren; i++)
 		{
-			processNode(node->mChildren[i], scene);
+			ProcessNode(node->mChildren[i], scene);
 		}
 	}
 
-	MeshAssimp Model::processMesh(aiMesh* mesh, const aiScene* scene)
+	MeshAssimp Model::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 	{
 		std::vector<VertexAssimp> vertices;
 		std::vector<unsigned int> indices;
-		std::vector<textureAssimp> textures;
+		std::vector<TextureAssimp> textures;
 
 		for (unsigned int i = 0; i < mesh->mNumVertices; i++)
 		{
@@ -85,13 +85,13 @@ namespace gl
 		if (mesh->mMaterialIndex >= 0)
 		{
 			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-			std::vector<textureAssimp> diffuseMaps = loadMaterialTextures(material,
+			std::vector<TextureAssimp> diffuseMaps = LoadMaterialTextures(material,
 				aiTextureType_DIFFUSE, "Diffuse");
 			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-			std::vector<textureAssimp> specularMaps = loadMaterialTextures(material,
+			std::vector<TextureAssimp> specularMaps = LoadMaterialTextures(material,
 				aiTextureType_SPECULAR, "Specular");
 			textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-			std::vector<textureAssimp> normalMaps = loadMaterialTextures(material,
+			std::vector<TextureAssimp> normalMaps = LoadMaterialTextures(material,
 				aiTextureType_HEIGHT, "Normal");
 			textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
 		}
@@ -99,9 +99,9 @@ namespace gl
 		return MeshAssimp(vertices, indices, textures);
 	}
 
-	std::vector<textureAssimp> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
+	std::vector<TextureAssimp> Model::LoadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
 	{
-		std::vector<textureAssimp> textures;
+		std::vector<TextureAssimp> textures;
 		for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
 		{
 			aiString str;
@@ -118,7 +118,7 @@ namespace gl
 			}
 			if (!skip)
 			{   // if texture hasn't been loaded already, load it
-				textureAssimp texture;
+				TextureAssimp texture;
 				texture.id = TextureFromFile(str.C_Str(), directory);
 				texture.type = typeName;
 				texture.path = str.C_Str();

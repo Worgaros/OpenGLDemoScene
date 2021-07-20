@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 namespace gl {
-	struct textureAssimp
+	struct TextureAssimp
 	{
 		unsigned int id;
 		std::string type;
